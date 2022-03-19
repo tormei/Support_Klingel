@@ -38,7 +38,7 @@ void setup() {
     delay(2000);
   }
   audio.setPinout(AMP_BCLK, AMP_LRC, AMP_DOUT);
-  audio.setVolume(8); // 0...21
+  audio.setVolume(10); // 0...21
   audio.forceMono(true);
   int wake_reason = print_wakeup_reason();
   if (wake_reason == 0)
@@ -54,6 +54,7 @@ void setup() {
   }
   else if (wake_reason ==3) {
     check_akku();
+    Serial.println("going back to sleep-mode");
     esp_deep_sleep_start();
   }
 }
@@ -72,10 +73,10 @@ void btn_loop() {
     solution_index = random(0, numberOfSolutions);
 	  audio.loop();
     counter++;
-    if(counter == 1000) {
+    if(counter == 1000 && runOnAkku) {
       check_akku();
     }
-    if(counter > 6000) {
+    if(counter > 6000 && runOnAkku) {
       Serial.println("Entering sleep-mode");
       esp_deep_sleep_start();
     }
