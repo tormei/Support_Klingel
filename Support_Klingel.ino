@@ -23,9 +23,16 @@ RTC_DATA_ATTR bool audioIsPlaying = false;
 RTC_DATA_ATTR int numberOfSolutions = 0;
 RTC_DATA_ATTR char * solutionsDir = "/solutions";
 RTC_DATA_ATTR int boot_count = 0;
+int last_sup = 0;
+int last_sup2 = 0;
+int last_sup3 = 0;
+int last_sup4 = 0;
+int last_sup5 = 0;
+int rndSeed = 27;
 
 void setup() {
   _initVoltsArray();
+  randomSeed(analogRead(rndSeed));
   pinMode(BTN, INPUT_PULLUP);
   pinMode(SD_CS, OUTPUT);      
   digitalWrite(SD_CS, HIGH);
@@ -46,7 +53,12 @@ void setup() {
     Serial.println("Prepare welcome audio...");
     audio.connecttoFS(SD, "welcome.mp3");
     numberOfSolutions = countSupportAnswers(SD, solutionsDir); //Dir of 0_index_based_number.mp3 Files
-      if(getBatteryVolts() > 3.2) {
+    last_sup = random(0, numberOfSolutions);
+    last_sup2 = random(0, numberOfSolutions);
+    last_sup3 = random(0, numberOfSolutions);
+    last_sup4 = random(0, numberOfSolutions);
+    last_sup5 = random(0, numberOfSolutions);
+      if(getBatteryVolts() > 2.8) {
        esp_sleep_enable_timer_wakeup(SLEEP_TIME * 1000000);
        runOnAkku = true;
        Serial.println("Runnin with Akku");
@@ -70,27 +82,45 @@ void btn_loop() {
   int solution_index = 0; 
   int counter = 0;
   while (digitalRead(BTN) == HIGH) {
-    solution_index = random(0, numberOfSolutions);
 	  audio.loop();
     counter++;
-    if(counter == 1000 && runOnAkku) {
-      check_akku();
+    if(counter == 1000) {
+      if (runOnAkku)
+      {
+        check_akku();
+      }
+      else
+      {
+        solution_index = random(0, numberOfSolutions);
+        counter = 0;
+      }
     }
     if(counter > 6000 && runOnAkku) {
+      counter = 0;
       Serial.println("Entering sleep-mode");
       esp_deep_sleep_start();
     }
     delay(5);
     
   }
+  //take care that the solutions do not repead to quickly
+  while (solution_index == last_sup || solution_index == last_sup2 || solution_index == last_sup3 || solution_index == last_sup4 || solution_index == last_sup5) {
+    solution_index = random(0, numberOfSolutions);
+  }
+  last_sup5 = last_sup4;
+  last_sup4 = last_sup3;
+  last_sup3 = last_sup2;
+  last_sup2 = last_sup;
+  last_sup = solution_index;
+  //Present solution to user
+  //Serial.println(solution_index);
   giveSupport(solution_index);
   Serial.println("Reached end of btn_loop");
 }
 
 
 void giveSupport(int solution_index) {
-  char file[80];//* file = solutionsDir; //(char*)malloc(40*sizeof(char)); //convert solution_index from int to char* so that strcat can later work with it
-  //char* tmp = strcat(solutionsDir, "%i.mp3");
+  char file[40]; //prepare the matching solution_file for playing
   sprintf(file, "/solutions/%i.mp3", solution_index);
   Serial.print("Play Supportevent "); Serial.println(String(solution_index));
   //Welcome the User
